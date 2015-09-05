@@ -25,7 +25,6 @@ intended as a way to learn about implementing webscrapers and doing some data vi
     
 **Additional Feature**
   The bash script can be run asychronously using a crontab
-  e.g. ```crontab -e```
-
-       ``` 0 12 * * * sh ~/Desktop/scrapers_repo/scrapy_script.py```
+  e.g. ```crontab -e```  
+   ``` 0 12 * * * sh ~/Desktop/scrapers_repo/scrapy_script.py```
   
