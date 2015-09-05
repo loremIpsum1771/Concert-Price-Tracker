@@ -6,6 +6,7 @@ intended as a way to learn about implementing webscrapers and doing some data vi
 ##Features
 * **The web scrapers are written in the [Scrapy framework 1.0](https://github.com/scrapy/scrapy) 
     (more info info in the [scrapy docs](http://doc.scrapy.org/))**
+* **Scrapy web spiders parse JSON data to retrieve prices from the websites**
 * **Postgresql used as the DBMS**
 * **Uses [Matplotlib](https://github.com/matplotlib/matplotlib) and [numpy](https://github.com/numpy/numpy) to plot the 
   changes in the lowest price for a concert in a particular place over time**
