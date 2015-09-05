@@ -10,11 +10,11 @@ from scrapy.item import Item, Field
 
 class ComparatorItem(Item):
 	"""Item object container for vividseats.com data"""
-	eventName = Field()
-	ticketPrice = Field()
-	eventLocation = Field()
-	ticketsLink = Field()
-	eventDate = Field()
-	eventCity = Field()
-	eventState = Field()
-	eventTime = Field()
+	eventname = Field()
+	ticketprice = Field()
+	eventlocation = Field()
+	ticketslink = Field()
+	eventdate = Field()
+	eventcity = Field()
+	eventstate = Field()
+	eventtime = Field()

@@ -1,0 +1,51 @@
+import scrapy
+import re
+import json
+from scrapy.crawler import CrawlerProcess
+from scrapy import Request
+from scrapy.contrib.spiders import CrawlSpider , Rule
+from scrapy.selector import HtmlXPathSelector
+from scrapy.selector import Selector
+from scrapy.contrib.loader import ItemLoader
+from scrapy.contrib.loader import XPathItemLoader
+from scrapy.contrib.loader.processor import Join, MapCompose
+from scraper.items import ComparatorItem
+from urlparse import urljoin
+
+from scrapy.crawler import CrawlerRunner
+from twisted.internet import reactor, defer
+from scrapy.utils.log import configure_logging
+
+
+ class MySpider(CrawlSpider):
+    handle_httpstatus_list = [416]
+    name = 'comparator'
+    allowed_domains = ["www.vividseats.com"]
+    start_urls = [vs_url]
+    tickets_list_xpath = './/*[@itemtype="http://schema.org/Event"]'
+    def parse_price(self, response):
+        #First attempt at trying to load price into item loader
+        loader.add_xpath('ticketPrice' , '//*[@class="eventTickets lastChild"]/div/div/@data-origin-price')
+        print 'ticket price'
+    def parse(self, response):
+        selector = HtmlXPathSelector(response)
+        # iterate over tickets
+        for ticket in selector.select(self.tickets_list_xpath):
+
+            loader = XPathItemLoader(ComparatorItem(), selector=ticket)
+            # define loader
+            loader.default_input_processor = MapCompose(unicode.strip)
+            loader.default_output_processor = Join()
+            # iterate over fields and add xpaths to the loader
+
+            loader.add_xpath('eventName' , './/*[@class="productionsEvent"]/text()')
+            loader.add_xpath('eventLocation' , './/*[@class = "productionsVenue"]/span[@itemprop  = "name"]/text()')
+            loader.add_xpath('ticketsLink' , './/*/td[3]/a/@href')
+            loader.add_xpath('eventDate' , './/*[@class = "productionsDate"]/text()')
+            loader.add_xpath('eventCity' , './/*[@class = "productionsVenue"]/span[@itemprop  = "address"]/span[@itemprop  = "addressLocality"]/text()')
+            loader.add_xpath('eventState' , './/*[@class = "productionsVenue"]/span[@itemprop  = "address"]/span[@itemprop  = "addressRegion"]/text()')
+            loader.add_xpath('eventTime' , './/*[@class = "productionsTime"]/text()')
+
+            ticketsURL = "concerts/" + bandname + "-tickets/" + bandname + "-" + loader["ticketsLink"]
+            request = scrapy.Request(ticketsURL , callback = self.parse_price)
+            yield loader.load_item()

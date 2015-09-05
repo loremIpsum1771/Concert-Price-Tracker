@@ -22,12 +22,12 @@ class Tickets(DeclarativeBase):
     __tablename__ = "vs_tickets"
 
     id = Column(Integer, primary_key=True)
-    eventName = Column('eventName', String)
-    ticketPrice = Column('ticketPrice', String, nullable=True)
-    eventLocation = Column('eventLocation', String, nullable=True)
-    ticketsLink = Column('ticketsLink', String, nullable=True)
-    eventDate = Column('eventDate', String, nullable=True)
-    eventCity = Column('eventCity', String, nullable=True)
-    eventState = Column('eventState', String, nullable=True)
-    eventTime = Column('eventTime', String, nullable=True)
+    eventname = Column('eventname', String)
+    ticketprice = Column('ticketprice', String, nullable=True)
+    eventlocation = Column('eventlocation', String, nullable=True)
+    ticketslink = Column('ticketslink', String, nullable=True)
+    eventdate = Column('eventdate', String, nullable=True)
+    eventcity = Column('eventcity', String, nullable=True)
+    eventstate = Column('eventstate', String, nullable=True)
+    eventtime = Column('eventtime', String, nullable=True)
     

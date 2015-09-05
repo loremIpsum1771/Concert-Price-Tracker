@@ -1,0 +1,275 @@
+import scrapy
+import re
+import json
+from scrapy.crawler import CrawlerProcess
+from scrapy import Request
+from scrapy.contrib.spiders import CrawlSpider , Rule
+from scrapy.selector import HtmlXPathSelector
+from scrapy.selector import Selector
+from scrapy.contrib.loader import ItemLoader
+from scrapy.contrib.loader import XPathItemLoader
+from scrapy.contrib.loader.processor import Join, MapCompose
+from comparison.ticket_city_scraper.ticket_city_scraper.items import ComparatorItem
+from urlparse import urljoin
+
+from scrapy.utils.project import get_project_settings
+from scrapy.crawler import CrawlerRunner
+from twisted.internet import reactor, defer
+from scrapy.utils.log import configure_logging
+
+
+from billiard import Process
+
+
+
+
+# bandname = raw_input("Enter bandname\n")
+# tc_url = "https://www.ticketcity.com/concerts/" + bandname + "-tickets.html" 
+
+tc_url = "https://www.ticketcity.com/concerts/awolnation-tickets.html" 
+
+class MySpider3(CrawlSpider):
+    handle_httpstatus_list = [416]
+    name = 'comparator'
+    allowed_domains = ["www.ticketcity.com"]
+
+    start_urls = [tc_url]
+    tickets_list_xpath = './/div[@class = "vevent"]'
+    def create_link(self, bandname):
+        tc_url = "https://www.ticketcity.com/concerts/" + bandname + "-tickets.html"  
+        self.start_urls = [tc_url]
+        #return tc_url      
+    
+    tickets_list_xpath = './/div[@class = "vevent"]'
+    
+    def parse_json(self, response):
+        loader = response.meta['loader']
+        jsonresponse = json.loads(response.body_as_unicode())
+        ticket_info = jsonresponse.get('B')
+        price_list = [i.get('P') for i in ticket_info]
+        if len(price_list) > 0:
+            str_Price = str(price_list[0])
+            ticketPrice = unicode(str_Price, "utf-8")
+            loader.add_value('ticketPrice', ticketPrice)
+        else:
+            ticketPrice = unicode("sold out", "utf-8")
+            loader.add_value('ticketPrice', ticketPrice)
+        return loader.load_item()
+
+    def parse_price(self, response):
+        print "parse price function entered \n"
+        loader = response.meta['loader']
+        event_City = response.xpath('.//span[@itemprop="addressLocality"]/text()').extract() 
+        eventCity = ''.join(event_City) 
+        loader.add_value('eventCity' , eventCity)
+        event_State = response.xpath('.//span[@itemprop="addressRegion"]/text()').extract() 
+        eventState = ''.join(event_State) 
+        loader.add_value('eventState' , eventState) 
+        event_Date = response.xpath('.//span[@class="event_datetime"]/text()').extract() 
+        eventDate = ''.join(event_Date)  
+        loader.add_value('eventDate' , eventDate)    
+        ticketsLink = loader.get_output_value("ticketsLink")
+        json_id_list= re.findall(r"(\d+)[^-]*$", ticketsLink)
+        json_id=  "".join(json_id_list)
+        json_url = "https://www.ticketcity.com/Catalog/public/v1/events/" + json_id + "/ticketblocks?P=0,99999999&q=0&per_page=250&page=1&sort=p.asc&f.t=s&_=1436642392938"
+        yield scrapy.Request(json_url, meta={'loader': loader}, callback = self.parse_json, dont_filter = True) 
+        
+    def parse(self, response):
+        """
+        # """
+        selector = HtmlXPathSelector(response)
+        # iterate over tickets
+        for ticket in selector.select(self.tickets_list_xpath):
+            loader = XPathItemLoader(ComparatorItem(), selector=ticket)
+            # define loader
+            loader.default_input_processor = MapCompose(unicode.strip)
+            loader.default_output_processor = Join()
+            # iterate over fields and add xpaths to the loader
+            loader.add_xpath('eventName' , './/span[@class="summary listingEventName"]/text()')
+            loader.add_xpath('eventLocation' , './/div[@class="divVenue location"]/text()')
+            loader.add_xpath('ticketsLink' , './/a[@class="divEventDetails url"]/@href')
+            #loader.add_xpath('eventDateTime' , '//div[@id="divEventDate"]/@title') #datetime type
+            #loader.add_xpath('eventTime' , './/*[@class = "productionsTime"]/text()')
+            
+            print "Here is ticket link \n" + loader.get_output_value("ticketsLink")
+            #sel.xpath("//span[@id='PractitionerDetails1_Label4']/text()").extract()
+            ticketsURL = "https://www.ticketcity.com/" + loader.get_output_value("ticketsLink")
+            ticketsURL = urljoin(response.url, ticketsURL)
+            yield scrapy.Request(ticketsURL, meta={'loader': loader}, callback = self.parse_price, dont_filter = True)
+
+#Code to run spider from celery task script
+class UrlCrawlerScript(Process):
+    def __init__(self, spider):
+        Process.__init__(self)
+        settings = get_project_settings()
+        self.crawler = Crawler(settings)
+        self.crawler.configure()
+        self.crawler.signals.connect(reactor.stop, signal = signals.spider_closed)
+        self.spider = spider
+
+    def run(self):
+        self.crawler.crawl(self.spider)
+        self.crawler.start()
+        reactor.run()
+
+def spiderCrawl():
+   # settings = get_project_settings()
+   # settings.set('USER_AGENT','Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)')
+   # process = CrawlerProcess(settings)
+   # process.crawl(MySpider3)
+   # process.start()
+   spider = MySpider()
+   crawler = UrlCrawlerScript(spider)
+   crawler.start()
+   crawler.join()
+
+
+        
+# import sys
+# import re
+# import json
+# from scrapy.crawler import CrawlerProcess
+# from scrapy import Request
+# from scrapy.contrib.spiders import CrawlSpider , Rule
+# from scrapy.selector import HtmlXPathSelector
+# from scrapy.selector import Selector
+# from scrapy.contrib.loader import ItemLoader
+# from scrapy.contrib.loader import XPathItemLoader
+# from scrapy.contrib.loader.processor import Join, MapCompose
+# from ticket_city_scraper.items import ComparatorItem, ComparatorItem3
+# from urlparse import urljoin
+
+# from scrapy.crawler import CrawlerRunner
+# from twisted.internet import reactor, defer
+# from scrapy.utils.log import configure_logging
+# #sys.path.append("/home/elijah/Desktop/trydjango18/concert_comparator/concert_comparator/pipelines.py")
+# # import imp
+# # pipelines = imp.load_source('pipelines', '/home/elijah/Desktop/trydjango18/concert_comparator/concert_comparator/pipelines/pipelines.py')
+# import ticket_city_scraper.pipelines.pipelines 
+# # ComparatorPipeline = pipelines.ComparatorPipeline
+# bandname = raw_input("Enter a bandname \n")
+
+# vs_url = "http://www.vividseats.com/concerts/" + bandname + "-tickets.html"
+# tc_url = "https://www.ticketcity.com/concerts/" + bandname + "-tickets.html"
+
+# class MySpider(CrawlSpider):
+#     pipeline = set([
+#         pipelines.ComparatorPipeline
+#         ])
+#     handle_httpstatus_list = [416]
+#     name = 'comparator'
+#     allowed_domains = ["www.vividseats.com"]
+#     start_urls = [vs_url]
+#     tickets_list_xpath = './/*[@itemtype="http://schema.org/Event"]'
+
+#     def parse_json(self, response):
+#         loader = response.meta['loader']
+#         jsonresponse = json.loads(response.body_as_unicode())
+#         ticket_info = jsonresponse.get('tickets')
+#         price_list = [i.get('p') for i in ticket_info]
+#         if len(price_list) > 0:
+#             str_Price = str(price_list[0])
+#             ticketPrice = unicode(str_Price, "utf-8")
+#             loader.add_value('ticketPrice', ticketPrice)
+#         else:
+#             ticketPrice = unicode("sold out", "utf-8")
+#             loader.add_value('ticketPrice', ticketPrice)
+#         return loader.load_item()
+#     def parse_price(self, response):
+#         loader = response.meta['loader']
+#         ticketsLink = loader.get_output_value("ticketsLink")
+#         json_id_list= re.findall(r"(\d+)[^-]*$", ticketsLink)
+#         json_id=  "".join(json_id_list)
+#         json_url = "http://www.vividseats.com/javascript/tickets.shtml?productionId=" + json_id
+#         yield scrapy.Request(json_url, meta={'loader': loader}, callback = self.parse_json, dont_filter = True) 
+
+#     def parse(self, response):
+#         """
+#         # """
+#         selector = HtmlXPathSelector(response)
+#         # iterate over tickets
+#         for ticket in selector.select(self.tickets_list_xpath):
+#             loader = XPathItemLoader(ComparatorItem(), selector=ticket)
+#             # define loader
+#             loader.default_input_processor = MapCompose(unicode.strip)
+#             loader.default_output_processor = Join()
+#             # iterate over fields and add xpaths to the loader
+#             loader.add_xpath('eventName' , './/*[@class="productionsEvent"]/text()')
+#             loader.add_xpath('eventLocation' , './/*[@class = "productionsVenue"]/span[@itemprop  = "name"]/text()')
+#             loader.add_xpath('ticketsLink' , './/*/a[@class = "btn btn-primary"]/@href')
+#             loader.add_xpath('eventDate' , './/*[@class = "productionsDate"]/text()')
+#             loader.add_xpath('eventCity' , './/*[@class = "productionsVenue"]/span[@itemprop  = "address"]/span[@itemprop  = "addressLocality"]/text()')
+#             loader.add_xpath('eventState' , './/*[@class = "productionsVenue"]/span[@itemprop  = "address"]/span[@itemprop  = "addressRegion"]/text()')
+#             loader.add_xpath('eventTime' , './/*[@class = "productionsTime"]/text()')
+
+#             print "Here is ticket link \n" + loader.get_output_value("ticketsLink")
+#             #sel.xpath("//span[@id='PractitionerDetails1_Label4']/text()").extract()
+#             ticketsURL = "concerts/" + bandname + "-tickets/" + bandname + "-" + loader.get_output_value("ticketsLink")
+#             ticketsURL = urljoin(response.url, ticketsURL)
+#             yield scrapy.Request(ticketsURL, meta={'loader': loader}, callback = self.parse_price, dont_filter = True)
+
+
+# class MySpider3(CrawlSpider):
+#     pipeline = set([
+#         pipelines.ComparatorPipeline2
+#         ])
+#     handle_httpstatus_list = [416]
+#     name = 'comparator3'
+#     allowed_domains = ["www.ticketcity.com"]
+#     start_urls = [tc_url]
+#     tickets_list_xpath = './/div[@class = "vevent"]'
+
+#     def parse_json(self, response):
+#         loader = response.meta['loader']
+#         jsonresponse = json.loads(response.body_as_unicode())
+#         ticket_info = jsonresponse.get('B')
+#         price_list = [i.get('P') for i in ticket_info]
+#         if len(price_list) > 0:
+#             str_Price = str(price_list[0])
+#             ticketPrice = unicode(str_Price, "utf-8")
+#             loader.add_value('ticketPrice', ticketPrice)
+#         else:
+#             ticketPrice = unicode("sold out", "utf-8")
+#             loader.add_value('ticketPrice', ticketPrice)
+#         return loader.load_item()
+
+#     def parse_price(self, response):
+#         print "parse price function entered \n"
+#         loader = response.meta['loader']
+#         event_City = response.xpath('.//span[@itemprop="addressLocality"]/text()').extract() 
+#         eventCity = ''.join(event_City) 
+#         loader.add_value('eventCity' , eventCity)
+#         event_State = response.xpath('.//span[@itemprop="addressRegion"]/text()').extract() 
+#         eventState = ''.join(event_State) 
+#         loader.add_value('eventState' , eventState) 
+#         event_Date = response.xpath('.//span[@class="event_datetime"]/text()').extract() 
+#         eventDate = ''.join(event_Date)  
+#         loader.add_value('eventDate' , eventDate)    
+#         ticketsLink = loader.get_output_value("ticketsLink")
+#         json_id_list= re.findall(r"(\d+)[^-]*$", ticketsLink)
+#         json_id=  "".join(json_id_list)
+#         json_url = "https://www.ticketcity.com/Catalog/public/v1/events/" + json_id + "/ticketblocks?P=0,99999999&q=0&per_page=250&page=1&sort=p.asc&f.t=s&_=1436642392938"
+#         yield scrapy.Request(json_url, meta={'loader': loader}, callback = self.parse_json, dont_filter = True) 
+
+#     def parse(self, response):
+#         """
+#         # """
+#         selector = HtmlXPathSelector(response)
+#         # iterate over tickets
+#         for ticket in selector.select(self.tickets_list_xpath):
+#             loader = XPathItemLoader(ComparatorItem(), selector=ticket)
+#             # define loader
+#             loader.default_input_processor = MapCompose(unicode.strip)
+#             loader.default_output_processor = Join()
+#             # iterate over fields and add xpaths to the loader
+#             loader.add_xpath('eventName' , './/span[@class="summary listingEventName"]/text()')
+#             loader.add_xpath('eventLocation' , './/div[@class="divVenue location"]/text()')
+#             loader.add_xpath('ticketsLink' , './/a[@class="divEventDetails url"]/@href')
+#             #loader.add_xpath('eventDateTime' , '//div[@id="divEventDate"]/@title') #datetime type
+#             #loader.add_xpath('eventTime' , './/*[@class = "productionsTime"]/text()')
+
+#             print "Here is ticket link \n" + loader.get_output_value("ticketsLink")
+#             #sel.xpath("//span[@id='PractitionerDetails1_Label4']/text()").extract()
+#             ticketsURL = "https://www.ticketcity.com/" + loader.get_output_value("ticketsLink")
+#             ticketsURL = urljoin(response.url, ticketsURL)
+#             yield scrapy.Request(ticketsURL, meta={'loader': loader}, callback = self.parse_price, dont_filter = True)
