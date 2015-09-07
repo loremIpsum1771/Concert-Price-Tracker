@@ -25,6 +25,8 @@ intended as a way to learn about implementing webscrapers and doing some data vi
     ![alt tag](https://cloud.githubusercontent.com/assets/8988459/9701364/1a67330e-53f3-11e5-9724-0103af7be503.png)
     
     (Red Line = Prices scraped from vividseats.com , Blue Line = Prices scraped from ticketcity.com)
+
+
 **Additional Feature**
   The bash script can be run asychronously using a crontab
   e.g. ```crontab -e```  
