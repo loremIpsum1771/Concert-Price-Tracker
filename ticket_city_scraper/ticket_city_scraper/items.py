@@ -8,15 +8,6 @@
 import scrapy
 from scrapy.item import Item, Field
 
-# class ComparatorItem(Item):
-# 	"""Item object container for ticketcity.com data"""
-# 	eventName = Field()
-# 	ticketPrice = Field()
-# 	eventLocation = Field()
-# 	ticketsLink = Field()
-# 	eventDate = Field()
-# 	eventCity = Field()
-# 	eventState = Field()
 
 
 
