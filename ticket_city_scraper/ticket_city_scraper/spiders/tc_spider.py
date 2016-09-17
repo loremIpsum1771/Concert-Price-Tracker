@@ -22,9 +22,6 @@ bandname = raw_input("Enter a bandname \n")
 tc_url = "https://www.ticketcity.com/concerts/" + bandname + "-tickets.html"
 
 class MySpider3(CrawlSpider):
-    # pipeline = set([
-    #     ComparatorPipeline2
-    #     ])
     handle_httpstatus_list = [416]
     name = 'comparator'
     allowed_domains = ["www.ticketcity.com"]
@@ -77,11 +74,8 @@ class MySpider3(CrawlSpider):
             loader.add_xpath('eventname' , './/span[@class="summary listingEventName"]/text()')
             loader.add_xpath('eventlocation' , './/div[@class="divVenue location"]/text()')
             loader.add_xpath('ticketslink' , './/a[@class="divEventDetails url"]/@href')
-            #loader.add_xpath('eventDateTime' , '//div[@id="divEventDate"]/@title') #datetime type
-            #loader.add_xpath('eventTime' , './/*[@class = "productionsTime"]/text()')
             
             print "Here is ticket link \n" + loader.get_output_value("ticketslink")
-            #sel.xpath("//span[@id='PractitionerDetails1_Label4']/text()").extract()
             ticketsURL = "https://www.ticketcity.com/" + loader.get_output_value("ticketslink")
             ticketsURL = urljoin(response.url, ticketsURL)
             yield scrapy.Request(ticketsURL, meta={'loader': loader}, callback = self.parse_price, dont_filter = True)
