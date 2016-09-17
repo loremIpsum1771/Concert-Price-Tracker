@@ -77,7 +77,6 @@ class MySpider(CrawlSpider):
             loader.add_xpath('eventtime' , './/*[@class = "productionsTime"]/text()')
 
             print "Here is ticket link \n" + loader.get_output_value("ticketslink")
-            #sel.xpath("//span[@id='PractitionerDetails1_Label4']/text()").extract()
             ticketsURL = "concerts/" + bandname + "-tickets/" + bandname + "-" + loader.get_output_value("ticketslink")
             ticketsURL = urljoin(response.url, ticketsURL)
             yield scrapy.Request(ticketsURL, meta={'loader': loader}, callback = self.parse_price, dont_filter = True)
@@ -92,14 +91,3 @@ def spiderCrawl(bandname):
    process.crawl(MySpider)
    process.start()
     
-#     configure_logging()
-# runner = CrawlerRunner()
-
-# @defer.inlineCallbacks
-# def crawl():
-#     yield runner.crawl(MySpider)
-#     yield runner.crawl(MySpider3)
-#     reactor.stop()
-
-# crawl()
-# reactor.run()
