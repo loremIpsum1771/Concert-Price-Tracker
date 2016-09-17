@@ -13,7 +13,6 @@ conn = psycopg2.connect(database = "scrape")
 #prepare a cursor
 cur = conn.cursor()
 
-#query1 """ insert into lowestPrices values()"""
 
 query2 = """
 select ticketprice, eventdate from vs_tickets where eventstate = 'CA' order by ticketprice limit 1
@@ -97,18 +96,12 @@ plt.plot(tc_xs,tc_ys, 'b-o')
 plt.gcf().autofmt_xdate()
 
 
-# graph.plot(xs,ys, 'r-o')
-
-#graph.set_xticks(xs)
-
-
-#plt.plot(xs, ys)
 plt.title("Cheapest Alt-J California concert tickets over time")
 plt.xlabel("Date")
 plt.ylabel("Ticket Price")	
 plt.show()
 
-#print len(priceList)
+
 print len(dateList)
 cur.close()
 conn.close()
